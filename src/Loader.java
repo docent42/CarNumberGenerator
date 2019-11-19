@@ -1,63 +1,54 @@
-import java.util.ArrayList;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Loader
 {
     static Queue<String> queue = null; // куча для номеров
-    static volatile boolean cycle = true;// флаг для остановки Writer на диск
+    private static AtomicInteger counter = new AtomicInteger(0);// счетчик-флаг для остановки Писателя
 
     public static void main(String[] args)
     {
         //===================== MultiThread Generator ========================================================
 
         queue = new ConcurrentLinkedQueue<>();// потокобезопасная куча для записи сгенерированных регионов
-        ArrayList<Thread> pool = new ArrayList<>();// куча для потоков генерации
+        int coreCount = Runtime.getRuntime().availableProcessors();
+        int regionsAmount = 100;
         long startTime = System.currentTimeMillis();
+        String str;
+        Path targetPath = Paths.get("res\\num_multi.txt");
+        ExecutorService executorService = Executors.newFixedThreadPool(coreCount);
         System.out.println("------------------------- MultiThread generation ---------------------------\n");
 
         try
         {
-            for (int i = 0; i < 4; i++)
-                pool.add(new Thread(new RegionCreator(i, System.currentTimeMillis())));// создаем генераторы регионов
+            for (int i = 1; i < regionsAmount; i++)
+                executorService.submit(new Thread(new RegionCreator(i)));// создаем генераторы регионов
 
-            Thread writer = new Thread(new Writer("res\\num_multi.txt"));
-            writer.start();// стартуем Writer номеров на диск
-
-            for (Thread thread : pool)
-                thread.start();// стартуем генераторы
-            for (Thread thread : pool)
-                thread.join();// ставим главный поток на ожидание выполнения параллельных потоков
-
-            cycle = false;// тормозим Writer
-            writer.join();// ждем пока запишет все
-            System.out.println("------------------------- Process finished ---------------------------");
-            System.out.println((System.currentTimeMillis() - startTime) + " ms\n");
-
-        //===================== SingleThread Generator ===============================================
-
-        // То же самое но теперь все потоки друг за другом в режиме однопоточного исполнения
-
-            pool.clear();
-            queue.clear();
-            startTime = System.currentTimeMillis();
-            cycle = true;
-            System.out.println("------------------------- SingleThread generation ---------------------------\n");
-
-            for (int i = 0; i < 4; i++)
-                pool.add(new Thread(new RegionCreator(i, System.currentTimeMillis())));
-
-            Thread writer1 = new Thread(new Writer("res\\num_single.txt"));
-            writer1.start();
-
-            for (Thread thread : pool) {
-                thread.start();
-                thread.join();
+            while (counter.get() < regionsAmount-1 || Loader.queue.size() > 0)
+            {
+                if ((str = Loader.queue.poll()) != null) // выдираем из кучи данные для записи и пишем их на диск
+                {
+                    System.out.printf("   <----  Записано < %.1f %% > данных: %d bytes ---->%n",(double) counter.incrementAndGet()/99 * 100,str.length());// олдскульный логгер
+                    try {
+                        Files.write(targetPath, str.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
-            cycle = false;
-            writer.join();
+            executorService.shutdown();
+            System.out.println("Writer stopped....");
             System.out.println("------------------------- Process finished ---------------------------");
             System.out.println((System.currentTimeMillis() - startTime) + " ms\n");
+
         }
         catch (Exception ex)
         {

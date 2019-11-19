@@ -1,38 +1,35 @@
 public class RegionCreator implements Runnable
 {
-    private long startTime;
-    private int startIndex;
+    private int regionCode;
 
-    RegionCreator(int startIndex, long startTime)
+    RegionCreator(int regionCode)
     {
-      this.startTime = startTime;// начальное время генерации потока
-      this.startIndex = startIndex;// стартовый номер для генерации региона
+      this.regionCode = regionCode;// стартовый номер для генерации региона
     }
 
     @Override
     public void run()
     {
         char[] letters = {'У', 'К', 'Е', 'Н', 'Х', 'В', 'А', 'Р', 'О', 'С', 'М', 'Т'};// не моё......
-        System.out.println("Поток " + Thread.currentThread().getName() + " Started...");
+        System.out.println("Генерация региона - " + regionCode + " Процесс пошел ...");
 
-        // генерация 25 регионов
-
-        for (int regionCode = (startIndex == 0) ? 1 : startIndex * 25; regionCode < (startIndex * 25 + 25);regionCode++) {
-            StringBuilder carNumber = new StringBuilder();
+        StringBuilder carNumber = new StringBuilder();
             for (char firstLetter : letters) {
                 for (char secondLetter : letters) {
                     for (char thirdLetter : letters) {
                         for (int number = 1; number < 1000; number++) {
-                            carNumber.append(firstLetter).append(padNumber(number, 3))
-                                    .append(secondLetter).append(thirdLetter).append(padNumber(regionCode, 2))
+                            carNumber.append(firstLetter)
+                                    .append(padNumber(number, 3))
+                                    .append(secondLetter).append(thirdLetter)
+                                    .append(padNumber(regionCode, 2))
                                     .append("\n");
                         }
                     }
                 }
             }
-            Loader.queue.add(carNumber.toString());// кидаем в кучу номера одного региона
-        }
-        System.out.println("Поток " + Thread.currentThread().getName() + " завершил работу. Время выполнения: " + (System.currentTimeMillis() - startTime) + " ms");
+        Loader.queue.add(carNumber.toString());// кидаем в кучу номера одного региона
+
+        System.out.println("Генерация региона - " + regionCode + " Закончена !");
     }
     private static String padNumber(int number, int numberLength)
     {
