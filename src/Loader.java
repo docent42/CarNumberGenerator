@@ -19,7 +19,7 @@ public class Loader
         //===================== MultiThread Generator ========================================================
 
         queue = new ConcurrentLinkedQueue<>();// потокобезопасная куча для записи сгенерированных регионов
-        int coreCount = Runtime.getRuntime().availableProcessors();
+        int coreCount = Runtime.getRuntime().availableProcessors() * 2;
         int regionsAmount = 100;
         long startTime = System.currentTimeMillis();
         String str;
